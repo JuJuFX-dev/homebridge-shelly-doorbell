@@ -6,6 +6,9 @@ import { Config } from './Config';
 
 export class ShellyDoorbell implements AccessoryPlugin {
 
+  // NEU: Cache für den letzten bekannten Zustand
+  private cachedMechanicalDoorbellActive = true;
+
   private readonly log: Logging;
   private readonly api: API;
 
@@ -27,7 +30,9 @@ export class ShellyDoorbell implements AccessoryPlugin {
 
   private readonly hookName = 'Homebridge Doorbell';
 
-  private axios_args: AxiosRequestConfig = {};
+  private axios_args: AxiosRequestConfig = {
+      timeout: 5000, // NEU: Timeout, damit Requests nicht ewig hängen
+    };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   constructor(api: API, hap: HAP, log: Logging, config: Config) {
@@ -230,17 +235,18 @@ export class ShellyDoorbell implements AccessoryPlugin {
       'voltage_limit': number;
       'undervoltage_limit': number;
       'current_limit': number;
-    }>(
-      url,
-      this.axios_args,
-    ).then((response) => {
+     }>(url, this.axios_args);
+
       this.log.debug('GET /Switch.GetConfig?id=0 : ' + JSON.stringify(response.data));
-      return response.data.in_mode !== 'detached';
-    }).catch((error) => {
-      const msg = 'Error reading doorbell shelly settings type: ' + error + ' at URL ' + url;
-      this.log.error(msg);
-      throw new Error(msg);
-    });
+      this.cachedMechanicalDoorbellActive = response.data.in_mode !== 'detached';
+      return this.cachedMechanicalDoorbellActive;
+    } catch (error) {
+      // Nicht mehr werfen! Stattdessen loggen und letzten bekannten Wert zurückgeben.
+      this.log.warn(
+        `Konnte Shelly-Status nicht abfragen (${error}) an URL ${url}. Nutze zwischengespeicherten Wert.`,
+      );
+      return this.cachedMechanicalDoorbellActive;
+    }
   }
 
   async getLocalStorage(): Promise<LocalStorage> {
