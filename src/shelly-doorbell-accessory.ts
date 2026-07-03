@@ -220,28 +220,28 @@ export class ShellyDoorbell implements AccessoryPlugin {
    * because then it doesn't activates it's relay and the mechanical gong will not be triggered.
    */
   async isMechanicalDoorbellActive(): Promise<boolean> {
-    const url = this.shellyUrl+'/Switch.GetConfig?id=0';
-    return axios.get<{
-      'id': 0;
-      'name': string;
-      'in_mode': string;
-      'initial_state': string;
-      'auto_on': boolean;
-      'auto_on_delay': number;
-      'auto_off': boolean;
-      'auto_off_delay': number;
-      'autorecover_voltage_errors': boolean;
-      'power_limit': number;
-      'voltage_limit': number;
-      'undervoltage_limit': number;
-      'current_limit': number;
-     }>(url, this.axios_args);
+    const url = this.shellyUrl + '/Switch.GetConfig?id=0';
+    try {
+      const response = await axios.get<{
+        'id': 0;
+        'name': string;
+        'in_mode': string;
+        'initial_state': string;
+        'auto_on': boolean;
+        'auto_on_delay': number;
+        'auto_off': boolean;
+        'auto_off_delay': number;
+        'autorecover_voltage_errors': boolean;
+        'power_limit': number;
+        'voltage_limit': number;
+        'undervoltage_limit': number;
+        'current_limit': number;
+      }>(url, this.axios_args);
 
       this.log.debug('GET /Switch.GetConfig?id=0 : ' + JSON.stringify(response.data));
       this.cachedMechanicalDoorbellActive = response.data.in_mode !== 'detached';
       return this.cachedMechanicalDoorbellActive;
     } catch (error) {
-      // Nicht mehr werfen! Stattdessen loggen und letzten bekannten Wert zurückgeben.
       this.log.warn(
         `Konnte Shelly-Status nicht abfragen (${error}) an URL ${url}. Nutze zwischengespeicherten Wert.`,
       );
